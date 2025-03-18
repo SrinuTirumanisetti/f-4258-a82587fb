@@ -91,6 +91,102 @@ export const authAPI = {
   },
 };
 
+// Workers
+export const workerAPI = {
+  getAllWorkers: async () => {
+    try {
+      const response = await api.get('/workers');
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+  getWorkerById: async (id: string) => {
+    try {
+      const response = await api.get(`/workers/${id}`);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+  createWorker: async (workerData: any) => {
+    try {
+      const response = await api.post('/workers', workerData);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+  updateWorker: async (id: string, workerData: any) => {
+    try {
+      const response = await api.put(`/workers/${id}`, workerData);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+  deleteWorker: async (id: string) => {
+    try {
+      const response = await api.delete(`/workers/${id}`);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+  markRoomAsCleaned: async (workerId: string, roomId: string) => {
+    try {
+      const response = await api.put(`/workers/${workerId}/rooms/${roomId}/clean`);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+};
+
+// Moderators
+export const moderatorAPI = {
+  getAllModerators: async () => {
+    try {
+      const response = await api.get('/moderators');
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+  getModeratorById: async (id: string) => {
+    try {
+      const response = await api.get(`/moderators/${id}`);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+  createModerator: async (moderatorData: any) => {
+    try {
+      const response = await api.post('/moderators', moderatorData);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+  updateModerator: async (id: string, moderatorData: any) => {
+    try {
+      const response = await api.put(`/moderators/${id}`, moderatorData);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+  deleteModerator: async (id: string) => {
+    try {
+      const response = await api.delete(`/moderators/${id}`);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+};
+
 // Hotels
 export const hotelAPI = {
   getAllHotels: async () => {

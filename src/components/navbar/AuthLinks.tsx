@@ -1,5 +1,5 @@
 
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { User, LogOut, ShieldCheck, Shield } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -12,6 +12,12 @@ interface AuthLinksProps {
 const AuthLinks = ({ isAuthenticated, logout }: AuthLinksProps) => {
   const { state } = useAuth();
   const { user } = state;
+  const navigate = useNavigate();
+  
+  const handleLogout = () => {
+    logout();
+    navigate('/'); // Redirect to homepage after logout
+  };
   
   if (isAuthenticated) {
     return (
@@ -41,7 +47,7 @@ const AuthLinks = ({ isAuthenticated, logout }: AuthLinksProps) => {
           </Button>
         </Link>
         
-        <Button variant="ghost" size="sm" onClick={logout} className="btn-transition">
+        <Button variant="ghost" size="sm" onClick={handleLogout} className="btn-transition">
           <LogOut className="h-4 w-4 mr-2" />
           Logout
         </Button>

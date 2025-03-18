@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Room } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,9 +20,25 @@ const RoomCard = ({ room, hotelId, onBookRoom }: RoomCardProps) => {
   const [isBooking, setIsBooking] = useState(false);
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [selectedRoomNumber, setSelectedRoomNumber] = useState<number | null>(null);
+  const [dynamicPrice, setDynamicPrice] = useState(room.price);
   const navigate = useNavigate();
   const { state } = useAuth();
   const { isAuthenticated } = state;
+  
+  // Calculate dynamic price based on the number of guests
+  useEffect(() => {
+    const searchGuests = Number(localStorage.getItem('searchGuests') || '1');
+    const maxRoomCapacity = room.maxPeople;
+    
+    let calculatedPrice = room.price;
+    // If guests exceeds room capacity but is within double capacity, double the price
+    if (searchGuests > maxRoomCapacity && searchGuests <= maxRoomCapacity * 2) {
+      calculatedPrice = room.price * 2;
+    }
+    // If guests exceeds double capacity, show room as unavailable or suggest multiple rooms
+    
+    setDynamicPrice(calculatedPrice);
+  }, [room.price, room.maxPeople]);
   
   const handleBookRoom = () => {
     if (!isAuthenticated) {
@@ -54,6 +70,23 @@ const RoomCard = ({ room, hotelId, onBookRoom }: RoomCardProps) => {
   const handleCloseBookingForm = () => {
     setShowBookingForm(false);
     setSelectedRoomNumber(null);
+  };
+  
+  // Get search criteria from localStorage for date check
+  const getSearchDates = () => {
+    try {
+      const savedCriteria = localStorage.getItem('searchCriteria');
+      if (savedCriteria) {
+        const parsed = JSON.parse(savedCriteria);
+        return {
+          checkIn: parsed.checkIn ? new Date(parsed.checkIn) : null,
+          checkOut: parsed.checkOut ? new Date(parsed.checkOut) : null
+        };
+      }
+    } catch (error) {
+      console.error("Error parsing saved search criteria:", error);
+    }
+    return { checkIn: null, checkOut: null };
   };
   
   return (
@@ -106,8 +139,13 @@ const RoomCard = ({ room, hotelId, onBookRoom }: RoomCardProps) => {
           {/* Booking Section */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-4 border-t border-border">
             <div>
-              <span className="text-2xl font-bold text-hotel-700">${room.price}</span>
+              <span className="text-2xl font-bold text-hotel-700">${dynamicPrice}</span>
               <span className="text-muted-foreground ml-1">per night</span>
+              {dynamicPrice !== room.price && (
+                <p className="text-xs text-hotel-600 mt-1">
+                  *Price adjusted based on guest count
+                </p>
+              )}
             </div>
             <Button
               onClick={handleBookRoom}
@@ -126,10 +164,10 @@ const RoomCard = ({ room, hotelId, onBookRoom }: RoomCardProps) => {
           {selectedRoomNumber && (
             <BookingForm
               hotel={{ _id: hotelId } as any}
-              room={room}
+              room={{...room, price: dynamicPrice}}
               roomNumber={selectedRoomNumber}
-              checkIn={null}
-              checkOut={null}
+              checkIn={getSearchDates().checkIn}
+              checkOut={getSearchDates().checkOut}
               onClose={handleCloseBookingForm}
             />
           )}

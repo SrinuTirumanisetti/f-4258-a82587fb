@@ -49,14 +49,32 @@ export interface User {
   updatedAt?: Date;
 }
 
+export interface Moderator {
+  _id?: string;
+  userId: string;
+  hotelId: string;
+  isActive: boolean;
+  permissions: {
+    canManageWorkers: boolean;
+    canManageRooms: boolean;
+    canViewBookings: boolean;
+  };
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
 export interface Worker {
   _id?: string;
   name: string;
+  userId: string;
+  hotelId: string;
   role: string;
-  hotel: string;
   email: string;
   phone?: string;
   isActive: boolean;
+  assignedRooms: {
+    roomId: string;
+  }[];
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -86,4 +104,5 @@ export interface SearchCriteria {
   checkIn: Date | null;
   checkOut: Date | null;
   guests: number;
+  priceRange?: [number, number];
 }

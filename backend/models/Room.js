@@ -37,6 +37,15 @@ const RoomSchema = new mongoose.Schema({
     type: mongoose.Schema.ObjectId,
     ref: 'User',
     default: null
+  },
+  assignedWorker: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'Worker',
+    default: null
+  },
+  needsCleaning: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true

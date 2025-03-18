@@ -1,15 +1,16 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { format, differenceInCalendarDays } from 'date-fns';
+import { format, differenceInCalendarDays, addDays } from 'date-fns';
 import { useAuth } from '@/context/AuthContext';
 import { Room, Hotel } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, CreditCard, User, Phone, Mail } from 'lucide-react';
+import { CalendarIcon, CreditCard, User, Phone, Mail, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { bookingAPI } from '@/services/api';
+import { bookingAPI, roomAPI } from '@/services/api';
 
 interface BookingFormProps {
   hotel: Hotel;
@@ -27,6 +28,7 @@ const BookingForm = ({ hotel, room, roomNumber, checkIn, checkOut, onClose }: Bo
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [totalPrice, setTotalPrice] = useState(0);
+  const [unavailableDates, setUnavailableDates] = useState<Date[]>([]);
   const [dateRange, setDateRange] = useState<{
     from: Date | undefined;
     to: Date | undefined;
@@ -35,11 +37,24 @@ const BookingForm = ({ hotel, room, roomNumber, checkIn, checkOut, onClose }: Bo
     to: checkOut || undefined,
   });
 
+  // Fetch unavailable dates for this room
+  useEffect(() => {
+    const getRoomUnavailableDates = () => {
+      const roomNumberObj = room.roomNumbers.find(r => r.number === roomNumber);
+      if (roomNumberObj) {
+        return roomNumberObj.unavailableDates.map(date => new Date(date));
+      }
+      return [];
+    };
+    
+    setUnavailableDates(getRoomUnavailableDates());
+  }, [room, roomNumber]);
+
   // Calculate total price when dates change
   useEffect(() => {
     if (dateRange.from && dateRange.to) {
-      const nights = differenceInCalendarDays(dateRange.to, dateRange.from);
-      setTotalPrice(room.price * nights);
+      const nights = differenceInCalendarDays(dateRange.to, dateRange.to < dateRange.from ? dateRange.from : dateRange.to);
+      setTotalPrice(room.price * Math.max(1, nights));
     } else {
       setTotalPrice(0);
     }
@@ -50,6 +65,12 @@ const BookingForm = ({ hotel, room, roomNumber, checkIn, checkOut, onClose }: Bo
       from: range.from,
       to: range.to
     });
+  };
+
+  const isDateUnavailable = (date: Date) => {
+    return unavailableDates.some(unavailableDate => 
+      unavailableDate.toDateString() === date.toDateString()
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -68,6 +89,23 @@ const BookingForm = ({ hotel, room, roomNumber, checkIn, checkOut, onClose }: Bo
     try {
       setIsSubmitting(true);
       
+      // Generate array of all dates in the range
+      const allDates: Date[] = [];
+      let currentDate = new Date(dateRange.from);
+      const endDate = new Date(dateRange.to);
+      
+      while (currentDate <= endDate) {
+        // Check if date is already unavailable
+        if (isDateUnavailable(currentDate)) {
+          toast.error(`The date ${format(currentDate, 'MMM d, yyyy')} is not available`);
+          setIsSubmitting(false);
+          return;
+        }
+        
+        allDates.push(new Date(currentDate));
+        currentDate = addDays(currentDate, 1);
+      }
+      
       // Create booking
       const bookingData = {
         userId: user._id,
@@ -83,9 +121,23 @@ const BookingForm = ({ hotel, room, roomNumber, checkIn, checkOut, onClose }: Bo
       const response = await bookingAPI.createBooking(bookingData);
       
       toast.success("Room booked successfully!");
+      
+      // Save booking ID to localStorage for receipt generation
+      const bookings = JSON.parse(localStorage.getItem('bookings') || '[]');
+      bookings.push({
+        id: response._id,
+        hotelName: hotel.name,
+        roomName: room.title,
+        roomNumber,
+        dateStart: dateRange.from,
+        dateEnd: dateRange.to,
+        totalPrice
+      });
+      localStorage.setItem('bookings', JSON.stringify(bookings));
+      
       navigate('/dashboard');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to book room");
+      toast.error(error.message || "Failed to book room");
     } finally {
       setIsSubmitting(false);
     }
@@ -193,9 +245,19 @@ const BookingForm = ({ hotel, room, roomNumber, checkIn, checkOut, onClose }: Bo
                     selected={dateRange}
                     onSelect={handleDateSelect}
                     numberOfMonths={2}
-                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                    disabled={(date) => {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      return date < today || isDateUnavailable(date);
+                    }}
                     className="p-3 pointer-events-auto"
                   />
+                  <div className="p-3 border-t border-border">
+                    <div className="flex items-center text-xs">
+                      <Info className="h-3 w-3 mr-1 text-muted-foreground" />
+                      <span className="text-muted-foreground">Unavailable dates are disabled</span>
+                    </div>
+                  </div>
                 </PopoverContent>
               </Popover>
             </div>

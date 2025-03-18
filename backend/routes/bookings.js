@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const Booking = require('../models/Booking');
@@ -235,7 +234,67 @@ router.put('/:id/cancel', protect, async (req, res) => {
       );
     }
     
+    // Mark the room as needing cleaning
+    await Room.findByIdAndUpdate(
+      booking.roomId,
+      { 
+        needsCleaning: true,
+        isCleaned: false
+      }
+    );
+    
     res.status(200).json(booking);
+  } catch (err) {
+    res.status(400).json({
+      success: false,
+      message: err.message
+    });
+  }
+});
+
+// @route   GET /api/bookings/:id/receipt
+// @desc    Get booking receipt data
+// @access  Private
+router.get('/:id/receipt', protect, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+    
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found'
+      });
+    }
+    
+    // Check authorization
+    if (booking.userId.toString() !== req.user.id && !req.user.isAdmin && !req.user.isModerator) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to view this receipt'
+      });
+    }
+    
+    // Get related data
+    const hotel = await Hotel.findById(booking.hotelId, 'name address city');
+    const room = await Room.findById(booking.roomId, 'title price');
+    const user = await User.findById(booking.userId, 'username email phone');
+    
+    if (!hotel || !room || !user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Some booking data not found'
+      });
+    }
+    
+    // Construct receipt data
+    const receiptData = {
+      booking,
+      hotel,
+      room,
+      user
+    };
+    
+    res.status(200).json(receiptData);
   } catch (err) {
     res.status(400).json({
       success: false,
