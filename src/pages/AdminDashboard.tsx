@@ -1,305 +1,538 @@
 
-import React from 'react';
-import { useToast } from '@/hooks/use-toast';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
+import AuthGuard from '@/components/AuthGuard';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Hotel, Bed, Users, ArrowUpRight, Plus, Edit, Trash } from 'lucide-react';
+import { hotelAPI, roomAPI, userAPI } from '@/services/api';
+import { toast } from 'sonner';
+import { Hotel as HotelType, Room as RoomType, User as UserType } from '@/types';
 
-// Mock booking data
-const bookings = [
-  {
-    id: 'BK00123',
-    guestName: 'John Smith',
-    roomType: 'Deluxe Room',
-    checkIn: '2023-08-10',
-    checkOut: '2023-08-15',
-    status: 'Confirmed',
-    amount: 750,
-  },
-  {
-    id: 'BK00124',
-    guestName: 'Emma Johnson',
-    roomType: 'Standard Room',
-    checkIn: '2023-08-12',
-    checkOut: '2023-08-14',
-    status: 'Confirmed',
-    amount: 200,
-  },
-  {
-    id: 'BK00125',
-    guestName: 'Michael Brown',
-    roomType: 'Family Suite',
-    checkIn: '2023-08-15',
-    checkOut: '2023-08-20',
-    status: 'Pending',
-    amount: 1100,
-  },
-  {
-    id: 'BK00126',
-    guestName: 'Sarah Davis',
-    roomType: 'Executive Suite',
-    checkIn: '2023-08-18',
-    checkOut: '2023-08-21',
-    status: 'Confirmed',
-    amount: 900,
-  },
-  {
-    id: 'BK00127',
-    guestName: 'Robert Wilson',
-    roomType: 'Standard Room',
-    checkIn: '2023-08-20',
-    checkOut: '2023-08-22',
-    status: 'Cancelled',
-    amount: 200,
-  },
-];
-
-// Mock room data
-const rooms = [
-  {
-    id: 101,
-    type: 'Standard Room',
-    status: 'Occupied',
-    guest: 'John Smith',
-    checkOut: '2023-08-15',
-  },
-  {
-    id: 102,
-    type: 'Standard Room',
-    status: 'Available',
-    guest: null,
-    checkOut: null,
-  },
-  {
-    id: 201,
-    type: 'Deluxe Room',
-    status: 'Available',
-    guest: null,
-    checkOut: null,
-  },
-  {
-    id: 202,
-    type: 'Deluxe Room',
-    status: 'Occupied',
-    guest: 'Sarah Davis',
-    checkOut: '2023-08-21',
-  },
-  {
-    id: 301,
-    type: 'Family Suite',
-    status: 'Maintenance',
-    guest: null,
-    checkOut: null,
-  },
-  {
-    id: 401,
-    type: 'Executive Suite',
-    status: 'Reserved',
-    guest: 'Michael Brown',
-    checkOut: '2023-08-20',
-  },
-];
-
+// Admin Dashboard component with authentication guard
 const AdminDashboard = () => {
-  const { toast } = useToast();
-
-  const handleStatusChange = (bookingId: string, newStatus: string) => {
-    toast({
-      title: 'Status Updated',
-      description: `Booking ${bookingId} status changed to ${newStatus}`,
-    });
-  };
-
-  const handleRoomStatusChange = (roomId: number, newStatus: string) => {
-    toast({
-      title: 'Room Status Updated',
-      description: `Room ${roomId} status changed to ${newStatus}`,
-    });
-  };
-
-  return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
+  const { state } = useAuth();
+  const { user } = state;
+  const navigate = useNavigate();
+  
+  const [activeTab, setActiveTab] = useState('overview');
+  const [hotels, setHotels] = useState<HotelType[]>([]);
+  const [rooms, setRooms] = useState<RoomType[]>([]);
+  const [users, setUsers] = useState<UserType[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Fetch data for dashboard
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch hotels, rooms, and users data
+        const [hotelsData, usersData] = await Promise.all([
+          hotelAPI.getAllHotels(),
+          userAPI.getAllUsers()
+        ]);
+        
+        setHotels(hotelsData || []);
+        setUsers(usersData || []);
+        
+        // Create an array to hold all rooms
+        let allRooms: RoomType[] = [];
+        
+        // Fetch rooms for each hotel
+        for (const hotel of hotelsData) {
+          if (hotel._id) {
+            const hotelRooms = await roomAPI.getRoomsForHotel(hotel._id);
+            if (hotelRooms && hotelRooms.length > 0) {
+              allRooms = [...allRooms, ...hotelRooms];
+            }
+          }
+        }
+        
+        setRooms(allRooms);
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        toast.error('Failed to load dashboard data');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchDashboardData();
+  }, []);
+  
+  // For demo purposes, create some mock data if no real data exists
+  useEffect(() => {
+    if (!loading && hotels.length === 0) {
+      // Mock hotels
+      const mockHotels = [
+        {
+          _id: 'h1',
+          name: 'Grand Hotel',
+          type: 'Hotel',
+          city: 'New York',
+          address: '123 Main St, New York',
+          distance: '500m from center',
+          photos: ['https://images.unsplash.com/photo-1566073771259-6a8506099945'],
+          title: 'Luxury Stay in NYC',
+          desc: 'Experience the best of New York City at our luxury hotel.',
+          rating: 4.8,
+          rooms: ['r1', 'r2'],
+          cheapestPrice: 199,
+          featured: true
+        },
+        {
+          _id: 'h2',
+          name: 'Seaside Resort',
+          type: 'Resort',
+          city: 'Miami',
+          address: '456 Ocean Dr, Miami',
+          distance: '200m from beach',
+          photos: ['https://images.unsplash.com/photo-1520250497591-112f2f40a3f4'],
+          title: 'Beach Paradise',
+          desc: 'Enjoy the sun and sand at our beautiful beach resort.',
+          rating: 4.6,
+          rooms: ['r3'],
+          cheapestPrice: 299,
+          featured: true
+        }
+      ];
       
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8">Hotel Admin Dashboard</h1>
+      setHotels(mockHotels as HotelType[]);
+    }
+    
+    if (!loading && rooms.length === 0) {
+      // Mock rooms
+      const mockRooms = [
+        {
+          _id: 'r1',
+          title: 'Deluxe King Room',
+          price: 199,
+          maxPeople: 2,
+          desc: 'Spacious room with king-size bed and city view.',
+          roomNumbers: [{ number: 101, unavailableDates: [] }, { number: 102, unavailableDates: [] }],
+          isCleaned: true,
+          isAssigned: false,
+          bookedBy: null
+        },
+        {
+          _id: 'r2',
+          title: 'Executive Suite',
+          price: 299,
+          maxPeople: 3,
+          desc: 'Luxury suite with separate living area and panoramic views.',
+          roomNumbers: [{ number: 201, unavailableDates: [] }],
+          isCleaned: true,
+          isAssigned: false,
+          bookedBy: null
+        },
+        {
+          _id: 'r3',
+          title: 'Ocean View Suite',
+          price: 399,
+          maxPeople: 4,
+          desc: 'Stunning suite with direct ocean views and private balcony.',
+          roomNumbers: [{ number: 301, unavailableDates: [] }, { number: 302, unavailableDates: [] }],
+          isCleaned: true,
+          isAssigned: false,
+          bookedBy: null
+        }
+      ];
+      
+      setRooms(mockRooms as RoomType[]);
+    }
+    
+    if (!loading && users.length === 0) {
+      // Mock users
+      const mockUsers = [
+        {
+          _id: 'u1',
+          username: 'johndoe',
+          email: 'john@example.com',
+          country: 'USA',
+          city: 'New York',
+          phone: '+1234567890',
+          isAdmin: false,
+          isModerator: false
+        },
+        {
+          _id: 'u2',
+          username: 'janedoe',
+          email: 'jane@example.com',
+          country: 'Canada',
+          city: 'Toronto',
+          phone: '+9876543210',
+          isAdmin: false,
+          isModerator: true
+        },
+        {
+          _id: 'u3',
+          username: 'admin',
+          email: 'admin@example.com',
+          country: 'UK',
+          city: 'London',
+          phone: '+1122334455',
+          isAdmin: true,
+          isModerator: false
+        }
+      ];
+      
+      setUsers(mockUsers as UserType[]);
+    }
+  }, [loading, hotels.length, rooms.length, users.length]);
+  
+  const handleDeleteHotel = async (hotelId: string) => {
+    try {
+      await hotelAPI.deleteHotel(hotelId);
+      setHotels(hotels.filter(hotel => hotel._id !== hotelId));
+      toast.success('Hotel deleted successfully');
+    } catch (error) {
+      console.error('Error deleting hotel:', error);
+      toast.error('Failed to delete hotel');
+    }
+  };
+  
+  const handleDeleteRoom = async (roomId: string, hotelId: string) => {
+    try {
+      await roomAPI.deleteRoom(roomId, hotelId);
+      setRooms(rooms.filter(room => room._id !== roomId));
+      toast.success('Room deleted successfully');
+    } catch (error) {
+      console.error('Error deleting room:', error);
+      toast.error('Failed to delete room');
+    }
+  };
+  
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      await userAPI.deleteUser(userId);
+      setUsers(users.filter(user => user._id !== userId));
+      toast.success('User deleted successfully');
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast.error('Failed to delete user');
+    }
+  };
+  
+  return (
+    <AuthGuard requireAdmin>
+      <div className="flex flex-col min-h-screen">
+        <Navbar />
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Total Bookings</CardTitle>
-              <CardDescription>Current month</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">156</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Occupancy Rate</CardTitle>
-              <CardDescription>Current status</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">78%</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Revenue</CardTitle>
-              <CardDescription>Current month</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">$24,560</p>
-            </CardContent>
-          </Card>
-        </div>
-        
-        <Tabs defaultValue="bookings" className="mt-6">
-          <TabsList>
-            <TabsTrigger value="bookings">Bookings</TabsTrigger>
-            <TabsTrigger value="rooms">Rooms</TabsTrigger>
-            <TabsTrigger value="guests">Guests</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="bookings" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Bookings</CardTitle>
-                <CardDescription>
-                  Manage and view all booking details
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Booking ID</TableHead>
-                      <TableHead>Guest</TableHead>
-                      <TableHead>Room Type</TableHead>
-                      <TableHead>Check-in</TableHead>
-                      <TableHead>Check-out</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {bookings.map((booking) => (
-                      <TableRow key={booking.id}>
-                        <TableCell className="font-medium">{booking.id}</TableCell>
-                        <TableCell>{booking.guestName}</TableCell>
-                        <TableCell>{booking.roomType}</TableCell>
-                        <TableCell>{booking.checkIn}</TableCell>
-                        <TableCell>{booking.checkOut}</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            booking.status === 'Confirmed' 
-                              ? 'bg-green-100 text-green-800' 
-                              : booking.status === 'Pending'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-red-100 text-red-800'
-                          }`}>
-                            {booking.status}
-                          </span>
-                        </TableCell>
-                        <TableCell>${booking.amount}</TableCell>
-                        <TableCell>
-                          <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => handleStatusChange(booking.id, 'Confirmed')}>
-                            View
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-              <CardFooter>
-                <Button variant="outline">View All Bookings</Button>
-              </CardFooter>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="rooms" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Room Status</CardTitle>
-                <CardDescription>
-                  Monitor and manage room availability
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Room Number</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Current Guest</TableHead>
-                      <TableHead>Check-out Date</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {rooms.map((room) => (
-                      <TableRow key={room.id}>
-                        <TableCell className="font-medium">{room.id}</TableCell>
-                        <TableCell>{room.type}</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            room.status === 'Available' 
-                              ? 'bg-green-100 text-green-800' 
-                              : room.status === 'Occupied'
-                                ? 'bg-blue-100 text-blue-800'
-                                : room.status === 'Maintenance'
-                                  ? 'bg-red-100 text-red-800'
-                                  : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {room.status}
-                          </span>
-                        </TableCell>
-                        <TableCell>{room.guest || '-'}</TableCell>
-                        <TableCell>{room.checkOut || '-'}</TableCell>
-                        <TableCell>
+        <main className="flex-grow py-12 bg-gray-50">
+          <div className="container-custom">
+            <header className="mb-8">
+              <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+              <p className="text-muted-foreground">
+                Manage hotels, rooms, and users from one central location
+              </p>
+            </header>
+            
+            {/* Dashboard Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Total Hotels
+                  </CardTitle>
+                  <Hotel className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{hotels.length}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {hotels.filter(h => h.featured).length} featured
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Total Rooms
+                  </CardTitle>
+                  <Bed className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{rooms.length}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {rooms.reduce((acc, room) => acc + room.roomNumbers.length, 0)} room numbers
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Registered Users
+                  </CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{users.length}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {users.filter(u => u.isAdmin).length} admins, 
+                    {users.filter(u => u.isModerator).length} moderators
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+            
+            {/* Dashboard Tabs */}
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid grid-cols-4 mb-8">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="hotels">Hotels</TabsTrigger>
+                <TabsTrigger value="rooms">Rooms</TabsTrigger>
+                <TabsTrigger value="users">Users</TabsTrigger>
+              </TabsList>
+              
+              {/* Overview Tab */}
+              <TabsContent value="overview" className="space-y-6">
+                <h2 className="text-xl font-semibold mb-4">System Overview</h2>
+                <p className="text-muted-foreground">
+                  Welcome to the StayHaven admin dashboard. Here you can manage all aspects of your hotel booking system.
+                </p>
+                
+                {/* Quick Actions */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+                  <Button onClick={() => setActiveTab('hotels')} variant="outline" className="justify-between">
+                    <span>Manage Hotels</span>
+                    <ArrowUpRight className="h-4 w-4" />
+                  </Button>
+                  <Button onClick={() => setActiveTab('rooms')} variant="outline" className="justify-between">
+                    <span>Manage Rooms</span>
+                    <ArrowUpRight className="h-4 w-4" />
+                  </Button>
+                  <Button onClick={() => setActiveTab('users')} variant="outline" className="justify-between">
+                    <span>Manage Users</span>
+                    <ArrowUpRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </TabsContent>
+              
+              {/* Hotels Tab */}
+              <TabsContent value="hotels" className="space-y-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold">Hotels</h2>
+                  <Button onClick={() => navigate('/admin/hotels/new')} size="sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Hotel
+                  </Button>
+                </div>
+                
+                <div className="grid grid-cols-1 gap-4">
+                  {hotels.map(hotel => (
+                    <Card key={hotel._id} className="overflow-hidden">
+                      <div className="flex flex-col md:flex-row">
+                        <div className="md:w-1/4 bg-muted h-40 md:h-auto">
+                          {hotel.photos && hotel.photos.length > 0 ? (
+                            <img 
+                              src={hotel.photos[0]} 
+                              alt={hotel.name} 
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex items-center justify-center h-full bg-gray-100">
+                              <Hotel className="h-10 w-10 text-gray-400" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="p-4 md:w-3/4">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="font-bold text-lg">{hotel.name}</h3>
+                              <p className="text-sm text-muted-foreground">
+                                {hotel.city}, {hotel.address}
+                              </p>
+                            </div>
+                            <div className="flex space-x-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => navigate(`/admin/hotels/edit/${hotel._id}`)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="destructive" 
+                                size="sm"
+                                onClick={() => handleDeleteHotel(hotel._id || '')}
+                              >
+                                <Trash className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="mt-2">
+                            <p className="text-sm">{hotel.desc}</p>
+                          </div>
+                          <div className="mt-4 flex justify-between items-center">
+                            <div>
+                              <span className="text-sm font-medium">Price: </span>
+                              <span className="text-sm">${hotel.cheapestPrice} / night</span>
+                            </div>
+                            <div>
+                              <span className="text-sm font-medium">Rooms: </span>
+                              <span className="text-sm">{hotel.rooms?.length || 0}</span>
+                            </div>
+                            <div>
+                              <span className="text-sm font-medium">Rating: </span>
+                              <span className="text-sm">{hotel.rating || 'N/A'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </TabsContent>
+              
+              {/* Rooms Tab */}
+              <TabsContent value="rooms" className="space-y-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold">Rooms</h2>
+                  <Button onClick={() => navigate('/admin/rooms/new')} size="sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Room
+                  </Button>
+                </div>
+                
+                <div className="grid grid-cols-1 gap-4">
+                  {rooms.map(room => (
+                    <Card key={room._id} className="overflow-hidden">
+                      <div className="p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-bold text-lg">{room.title}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              Max occupancy: {room.maxPeople} people
+                            </p>
+                          </div>
                           <div className="flex space-x-2">
-                            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => handleRoomStatusChange(room.id, 'Available')}>
-                              Change Status
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => navigate(`/admin/rooms/edit/${room._id}`)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="destructive" 
+                              size="sm"
+                              // Use a hotel ID from mock data for demo
+                              onClick={() => handleDeleteRoom(room._id || '', 'h1')}
+                            >
+                              <Trash className="h-4 w-4" />
                             </Button>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-              <CardFooter>
-                <Button variant="outline">Manage All Rooms</Button>
-              </CardFooter>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="guests" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Guest Management</CardTitle>
-                <CardDescription>
-                  View and manage guest information
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="h-[400px] flex items-center justify-center text-muted-foreground">
-                Guest management interface would appear here
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                        </div>
+                        <div className="mt-2">
+                          <p className="text-sm">{room.desc}</p>
+                        </div>
+                        <div className="mt-4 flex justify-between items-center">
+                          <div>
+                            <span className="text-sm font-medium">Price: </span>
+                            <span className="text-sm">${room.price} / night</span>
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium">Room Numbers: </span>
+                            <span className="text-sm">
+                              {room.roomNumbers.map(r => r.number).join(', ')}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium">Status: </span>
+                            <span className="text-sm">
+                              {room.isCleaned ? 'Cleaned' : 'Needs cleaning'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </TabsContent>
+              
+              {/* Users Tab */}
+              <TabsContent value="users" className="space-y-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold">Users</h2>
+                  <Button onClick={() => navigate('/admin/users/new')} size="sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add User
+                  </Button>
+                </div>
+                
+                <div className="grid grid-cols-1 gap-4">
+                  {users.map(user => (
+                    <Card key={user._id} className="overflow-hidden">
+                      <div className="p-4">
+                        <div className="flex justify-between items-start">
+                          <div className="flex items-center">
+                            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center mr-3">
+                              {user.img ? (
+                                <img 
+                                  src={user.img} 
+                                  alt={user.username} 
+                                  className="w-10 h-10 rounded-full object-cover"
+                                />
+                              ) : (
+                                <Users className="h-5 w-5 text-gray-500" />
+                              )}
+                            </div>
+                            <div>
+                              <h3 className="font-bold text-lg">{user.username}</h3>
+                              <p className="text-sm text-muted-foreground">{user.email}</p>
+                            </div>
+                          </div>
+                          <div className="flex space-x-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => navigate(`/admin/users/edit/${user._id}`)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="destructive" 
+                              size="sm"
+                              onClick={() => handleDeleteUser(user._id || '')}
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
+                          <div>
+                            <span className="text-sm font-medium">Location: </span>
+                            <span className="text-sm">{user.city}, {user.country}</span>
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium">Phone: </span>
+                            <span className="text-sm">{user.phone || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium">Role: </span>
+                            <span className="text-sm">
+                              {user.isAdmin ? 'Admin' : user.isModerator ? 'Moderator' : 'User'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </main>
+        
+        <Footer />
       </div>
-      
-      <Footer />
-    </div>
+    </AuthGuard>
   );
 };
 

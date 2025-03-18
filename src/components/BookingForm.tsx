@@ -1,317 +1,248 @@
-
-import React, { useState } from 'react';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { format } from 'date-fns';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { format, differenceInCalendarDays } from 'date-fns';
+import { useAuth } from '@/context/AuthContext';
+import { Room, Hotel } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon, CreditCard, User, Phone, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from 'sonner';
+import { bookingAPI } from '@/services/api';
 
-const bookingFormSchema = z.object({
-  firstName: z.string().min(2, { message: 'First name must be at least 2 characters.' }),
-  lastName: z.string().min(2, { message: 'Last name must be at least 2 characters.' }),
-  email: z.string().email({ message: 'Please enter a valid email address.' }),
-  phone: z.string().min(10, { message: 'Please enter a valid phone number.' }),
-  checkinDate: z.date({ required_error: 'Check-in date is required.' }),
-  checkoutDate: z.date({ required_error: 'Check-out date is required.' }),
-  adults: z.number().min(1, { message: 'At least 1 adult is required.' }).max(10),
-  children: z.number().min(0).max(10),
-  specialRequests: z.string().optional(),
-});
+interface BookingFormProps {
+  hotel: Hotel;
+  room: Room;
+  roomNumber: number;
+  checkIn: Date | null;
+  checkOut: Date | null;
+  onClose: () => void;
+}
 
-type BookingFormValues = z.infer<typeof bookingFormSchema>;
-
-const BookingForm = () => {
-  const { toast } = useToast();
-  const [step, setStep] = useState<number>(1);
+const BookingForm = ({ hotel, room, roomNumber, checkIn, checkOut, onClose }: BookingFormProps) => {
+  const { state } = useAuth();
+  const { user } = state;
+  const navigate = useNavigate();
   
-  const defaultValues: Partial<BookingFormValues> = {
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    adults: 1,
-    children: 0,
-    specialRequests: '',
-  };
-
-  const form = useForm<BookingFormValues>({
-    resolver: zodResolver(bookingFormSchema),
-    defaultValues,
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [totalPrice, setTotalPrice] = useState(0);
+  const [dateRange, setDateRange] = useState<{
+    from: Date | undefined;
+    to: Date | undefined;
+  }>({
+    from: checkIn || undefined,
+    to: checkOut || undefined,
   });
 
-  function onSubmit(data: BookingFormValues) {
-    // This would typically send the data to your backend API
-    console.log('Form submitted:', data);
-    toast({
-      title: 'Booking Received',
-      description: 'Your booking request has been received. We will contact you shortly.',
+  // Calculate total price when dates change
+  useEffect(() => {
+    if (dateRange.from && dateRange.to) {
+      const nights = differenceInCalendarDays(dateRange.to, dateRange.from);
+      setTotalPrice(room.price * nights);
+    } else {
+      setTotalPrice(0);
+    }
+  }, [dateRange, room.price]);
+
+  const handleDateSelect = (range: { from?: Date; to?: Date }) => {
+    setDateRange({
+      from: range.from,
+      to: range.to
     });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!user?._id) {
+      toast.error("You must be logged in to book a room");
+      return;
+    }
+    
+    if (!dateRange.from || !dateRange.to) {
+      toast.error("Please select check-in and check-out dates");
+      return;
+    }
+    
+    try {
+      setIsSubmitting(true);
+      
+      // Create booking
+      const bookingData = {
+        userId: user._id,
+        hotelId: hotel._id,
+        roomId: room._id,
+        roomNumber: roomNumber,
+        dateStart: dateRange.from,
+        dateEnd: dateRange.to,
+        totalPrice: totalPrice,
+        status: 'confirmed' as const,
+      };
+      
+      const response = await bookingAPI.createBooking(bookingData);
+      
+      toast.success("Room booked successfully!");
+      navigate('/dashboard');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to book room");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!user) {
+    return (
+      <div className="p-5 text-center">
+        <p className="mb-4">Please login to book this room</p>
+        <Button onClick={() => navigate('/login')} className="bg-hotel-500 hover:bg-hotel-600">
+          Go to Login
+        </Button>
+      </div>
+    );
   }
 
   return (
-    <section id="booking" className="py-24 px-4 bg-background">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Make a Reservation
-          </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            Book your stay directly with us for the best rates and personalized service.
-          </p>
+    <form onSubmit={handleSubmit} className="space-y-6 p-5">
+      <h3 className="text-lg font-semibold">Complete Your Booking</h3>
+      
+      <div className="space-y-4">
+        {/* Guest Information */}
+        <div className="space-y-4">
+          <h4 className="font-medium text-sm text-muted-foreground">Guest Information</h4>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                value={user.username}
+                readOnly
+                className="w-full rounded-md border border-input bg-muted px-3 py-2 pl-10 text-sm"
+              />
+            </div>
+            
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="email"
+                value={user.email}
+                readOnly
+                className="w-full rounded-md border border-input bg-muted px-3 py-2 pl-10 text-sm"
+              />
+            </div>
+            
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                value={user.phone || "Not provided"}
+                readOnly
+                className="w-full rounded-md border border-input bg-muted px-3 py-2 pl-10 text-sm"
+              />
+            </div>
+          </div>
         </div>
-
-        <Card className="border shadow-md">
-          <CardHeader>
-            <CardTitle>Booking Form</CardTitle>
-            <CardDescription>
-              Fill out the form below to make your reservation.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                {step === 1 && (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <FormField
-                        control={form.control}
-                        name="firstName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>First Name</FormLabel>
-                            <FormControl>
-                              <Input placeholder="John" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="lastName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Last Name</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Doe" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <FormField
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                              <Input type="email" placeholder="john.doe@example.com" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="phone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Phone Number</FormLabel>
-                            <FormControl>
-                              <Input placeholder="+1 (555) 123-4567" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    <Button type="button" onClick={() => setStep(2)} className="w-full">
-                      Continue
-                    </Button>
-                  </div>
-                )}
-
-                {step === 2 && (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <FormField
-                        control={form.control}
-                        name="checkinDate"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col">
-                            <FormLabel>Check-in Date</FormLabel>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <FormControl>
-                                  <Button
-                                    variant="outline"
-                                    className={cn(
-                                      "w-full pl-3 text-left font-normal",
-                                      !field.value && "text-muted-foreground"
-                                    )}
-                                  >
-                                    {field.value ? (
-                                      format(field.value, "PPP")
-                                    ) : (
-                                      <span>Pick a date</span>
-                                    )}
-                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                  </Button>
-                                </FormControl>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                  mode="single"
-                                  selected={field.value}
-                                  onSelect={field.onChange}
-                                  disabled={(date) => date < new Date()}
-                                  initialFocus
-                                  className="p-3 pointer-events-auto"
-                                />
-                              </PopoverContent>
-                            </Popover>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="checkoutDate"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col">
-                            <FormLabel>Check-out Date</FormLabel>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <FormControl>
-                                  <Button
-                                    variant="outline"
-                                    className={cn(
-                                      "w-full pl-3 text-left font-normal",
-                                      !field.value && "text-muted-foreground"
-                                    )}
-                                  >
-                                    {field.value ? (
-                                      format(field.value, "PPP")
-                                    ) : (
-                                      <span>Pick a date</span>
-                                    )}
-                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                  </Button>
-                                </FormControl>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                  mode="single"
-                                  selected={field.value}
-                                  onSelect={field.onChange}
-                                  disabled={(date) => {
-                                    const checkin = form.getValues().checkinDate;
-                                    return date < new Date() || (checkin && date <= checkin);
-                                  }}
-                                  initialFocus
-                                  className="p-3 pointer-events-auto"
-                                />
-                              </PopoverContent>
-                            </Popover>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <FormField
-                        control={form.control}
-                        name="adults"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Adults</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                min={1}
-                                max={10}
-                                {...field}
-                                onChange={(e) => field.onChange(Number(e.target.value))}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="children"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Children</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                min={0}
-                                max={10}
-                                {...field}
-                                onChange={(e) => field.onChange(Number(e.target.value))}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    <FormField
-                      control={form.control}
-                      name="specialRequests"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Special Requests</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Any special requests or preferences?"
-                              className="resize-none"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <div className="flex space-x-4">
-                      <Button type="button" variant="outline" onClick={() => setStep(1)} className="flex-1">
-                        Back
-                      </Button>
-                      <Button type="submit" className="flex-1">
-                        Book Now
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
+        
+        {/* Booking Details */}
+        <div className="space-y-4">
+          <h4 className="font-medium text-sm text-muted-foreground">Booking Details</h4>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm mb-1">Hotel</p>
+              <p className="font-medium">{hotel.name}</p>
+            </div>
+            
+            <div>
+              <p className="text-sm mb-1">Room</p>
+              <p className="font-medium">{room.title} (Room {roomNumber})</p>
+            </div>
+            
+            <div className="md:col-span-2">
+              <p className="text-sm mb-1">Stay Dates</p>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !dateRange.from && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateRange.from ? (
+                      dateRange.to ? (
+                        <>
+                          {format(dateRange.from, "MMM d, yyyy")} -{" "}
+                          {format(dateRange.to, "MMM d, yyyy")}
+                        </>
+                      ) : (
+                        format(dateRange.from, "MMM d, yyyy")
+                      )
+                    ) : (
+                      "Select dates"
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={dateRange.from}
+                    selected={dateRange}
+                    onSelect={handleDateSelect}
+                    numberOfMonths={2}
+                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+        </div>
+        
+        {/* Payment Summary */}
+        <div className="space-y-3 rounded-lg bg-gray-50 p-4">
+          <h4 className="font-medium">Payment Summary</h4>
+          
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span>Room rate:</span>
+              <span>${room.price} per night</span>
+            </div>
+            
+            {dateRange.from && dateRange.to && (
+              <div className="flex justify-between text-sm">
+                <span>Stay duration:</span>
+                <span>{differenceInCalendarDays(dateRange.to, dateRange.from)} nights</span>
+              </div>
+            )}
+            
+            <div className="border-t border-gray-200 pt-2 mt-2">
+              <div className="flex justify-between font-semibold">
+                <span>Total:</span>
+                <span>${totalPrice}</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-    </section>
+      
+      <div className="flex justify-between pt-4">
+        <Button type="button" variant="outline" onClick={onClose}>
+          Cancel
+        </Button>
+        
+        <Button 
+          type="submit"
+          className="bg-hotel-500 hover:bg-hotel-600"
+          disabled={isSubmitting || !dateRange.from || !dateRange.to || totalPrice === 0}
+        >
+          {isSubmitting ? "Processing..." : "Confirm Booking"}
+        </Button>
+      </div>
+    </form>
   );
 };
 
