@@ -2,9 +2,10 @@
 import React, { useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
-import Features from '../components/Features';
-import ProductShowcase from '../components/ProductShowcase';
+import RoomTypes from '../components/RoomTypes';
+import BookingForm from '../components/BookingForm';
 import Footer from '../components/Footer';
+import { Features } from '../components/Features';
 
 const Index = () => {
   // Smooth scrolling for anchor links
@@ -35,7 +36,8 @@ const Index = () => {
       <Navbar />
       <Hero />
       <Features />
-      <ProductShowcase />
+      <RoomTypes />
+      <BookingForm />
       <Footer />
     </div>
   );

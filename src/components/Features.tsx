@@ -1,33 +1,43 @@
 
 import React from 'react';
 import { useSequentialAnimation } from '@/lib/animations';
-import { Layers, Heart, Zap, Users } from 'lucide-react';
+import { Utensils, Wifi, Car, Clock, Coffee, Map } from 'lucide-react';
 
-const features = [
+const hotelFeatures = [
   {
-    icon: <Layers className="h-8 w-8" />,
-    title: 'Thoughtful Layers',
-    description: 'Each detail carefully considered and precisely placed for maximum impact with minimum effort.'
+    icon: <Wifi className="h-8 w-8" />,
+    title: 'Free High-Speed WiFi',
+    description: 'Stay connected with complimentary high-speed internet access throughout the hotel.'
   },
   {
-    icon: <Heart className="h-8 w-8" />,
-    title: 'Design with Purpose',
-    description: 'Form follows function in everything we create, making products that truly enhance experiences.'
+    icon: <Utensils className="h-8 w-8" />,
+    title: 'Restaurant & Bar',
+    description: 'Enjoy delicious meals and refreshing drinks at our on-site restaurant and bar.'
   },
   {
-    icon: <Zap className="h-8 w-8" />,
-    title: 'Lightning Performance',
-    description: 'Optimized for speed without compromising aesthetics or functionality.'
+    icon: <Car className="h-8 w-8" />,
+    title: 'Free Parking',
+    description: 'Convenient and secure parking available for all hotel guests at no additional cost.'
   },
   {
-    icon: <Users className="h-8 w-8" />,
-    title: 'Human-Centered',
-    description: 'Building experiences that feel natural and intuitive, designed for people first.'
+    icon: <Clock className="h-8 w-8" />,
+    title: '24/7 Reception',
+    description: 'Our front desk is staffed around the clock to assist you with any needs or inquiries.'
+  },
+  {
+    icon: <Coffee className="h-8 w-8" />,
+    title: 'Breakfast Included',
+    description: 'Start your day right with our complimentary breakfast buffet featuring local specialties.'
+  },
+  {
+    icon: <Map className="h-8 w-8" />,
+    title: 'Central Location',
+    description: 'Ideally situated in the heart of the city with easy access to major attractions and transit.'
   }
 ];
 
-const Features = () => {
-  const { containerRef, visibleItems } = useSequentialAnimation(features, 150);
+export const Features = () => {
+  const { containerRef, visibleItems } = useSequentialAnimation(hotelFeatures, 150);
 
   return (
     <section id="features" className="py-24 px-4">
@@ -35,22 +45,22 @@ const Features = () => {
         {/* Section header */}
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Crafted with Precision
+            Hotel Amenities
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Every feature designed with purpose, built with care, and delivered with conviction.
+            Enjoy these premium features and services during your stay with us.
           </p>
         </div>
 
         {/* Features grid */}
         <div 
           ref={containerRef} 
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
         >
-          {features.map((feature, index) => (
+          {hotelFeatures.map((feature, index) => (
             <div 
               key={index}
-              className={`feature-card transition-all duration-700 ease-out-expo ${
+              className={`feature-card p-6 rounded-lg border bg-card text-card-foreground shadow-sm transition-all duration-700 ease-out-expo ${
                 visibleItems[index] 
                   ? 'opacity-100 translate-y-0' 
                   : 'opacity-0 translate-y-8'
