@@ -4,8 +4,9 @@ import { useSequentialAnimation } from '@/lib/animations';
 import { Bed, Wifi, Coffee, Tv } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
-const roomTypes = [
+export const roomTypes = [
   {
     id: 1,
     className: 'Standard Room',
@@ -56,6 +57,7 @@ const getFeatureIcon = (feature: string) => {
 
 const RoomTypes = () => {
   const { containerRef, visibleItems } = useSequentialAnimation(roomTypes, 150);
+  const navigate = useNavigate();
 
   return (
     <section id="rooms" className="py-24 px-4 bg-muted/30">
@@ -121,7 +123,12 @@ const RoomTypes = () => {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button className="w-full">Book Now</Button>
+                <Button 
+                  className="w-full"
+                  onClick={() => navigate(`/rooms/${room.id}`)}
+                >
+                  Book Now
+                </Button>
               </CardFooter>
             </Card>
           ))}

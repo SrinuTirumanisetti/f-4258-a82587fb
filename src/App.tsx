@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import RoomDetail from "./pages/RoomDetail";
 import AdminDashboard from "./pages/AdminDashboard";
+import SearchResults from "./pages/SearchResults";
 
 const queryClient = new QueryClient();
 
@@ -20,6 +21,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/rooms/:id" element={<RoomDetail />} />
+          <Route path="/search" element={<SearchResults />} />
           <Route path="/admin" element={<AdminDashboard />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
@@ -30,3 +32,4 @@ const App = () => (
 );
 
 export default App;
+
