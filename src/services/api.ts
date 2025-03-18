@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Hotel, Room, User, Booking, SearchCriteria } from '@/types';
+import { Hotel, Room, User, Booking, SearchCriteria, Worker, Moderator } from '@/types';
 
 // Create an axios instance with the base URL
 const API_URL = 'http://localhost:8000/api';
@@ -59,7 +59,7 @@ const handleApiError = (error: any) => {
   }
 };
 
-// Authentication
+// Authentication with redirect to homepage on logout
 export const authAPI = {
   login: async (email: string, password: string) => {
     try {
@@ -80,6 +80,8 @@ export const authAPI = {
   },
   logout: () => {
     localStorage.removeItem('token');
+    // Redirect to homepage when logging out
+    window.location.href = '/';
   },
   getCurrentUser: async () => {
     try {
@@ -91,7 +93,7 @@ export const authAPI = {
   },
 };
 
-// Workers
+// Workers API
 export const workerAPI = {
   getAllWorkers: async () => {
     try {
@@ -109,7 +111,7 @@ export const workerAPI = {
       throw handleApiError(error);
     }
   },
-  createWorker: async (workerData: any) => {
+  createWorker: async (workerData: Partial<Worker>) => {
     try {
       const response = await api.post('/workers', workerData);
       return response.data;
@@ -117,7 +119,7 @@ export const workerAPI = {
       throw handleApiError(error);
     }
   },
-  updateWorker: async (id: string, workerData: any) => {
+  updateWorker: async (id: string, workerData: Partial<Worker>) => {
     try {
       const response = await api.put(`/workers/${id}`, workerData);
       return response.data;
@@ -187,7 +189,7 @@ export const moderatorAPI = {
   }
 };
 
-// Hotels
+// Hotels with enhanced search and price filtering
 export const hotelAPI = {
   getAllHotels: async () => {
     try {
@@ -198,32 +200,56 @@ export const hotelAPI = {
     }
   },
   getHotelById: async (id: string) => {
-    const response = await api.get(`/hotels/${id}`);
-    return response.data;
+    try {
+      const response = await api.get(`/hotels/${id}`);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
   },
   searchHotels: async (criteria: SearchCriteria) => {
-    const response = await api.post('/hotels/search', criteria);
-    return response.data;
+    try {
+      const response = await api.post('/hotels/search', criteria);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
   },
   getFeaturedHotels: async () => {
-    const response = await api.get('/hotels/featured');
-    return response.data;
+    try {
+      const response = await api.get('/hotels/featured');
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
   },
   createHotel: async (hotelData: Partial<Hotel>) => {
-    const response = await api.post('/hotels', hotelData);
-    return response.data;
+    try {
+      const response = await api.post('/hotels', hotelData);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
   },
   updateHotel: async (id: string, hotelData: Partial<Hotel>) => {
-    const response = await api.put(`/hotels/${id}`, hotelData);
-    return response.data;
+    try {
+      const response = await api.put(`/hotels/${id}`, hotelData);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
   },
   deleteHotel: async (id: string) => {
-    const response = await api.delete(`/hotels/${id}`);
-    return response.data;
+    try {
+      const response = await api.delete(`/hotels/${id}`);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
   },
 };
 
-// Rooms
+// Rooms with enhanced booking functionality
 export const roomAPI = {
   getRoomsForHotel: async (hotelId: string) => {
     const response = await api.get(`/rooms/hotel/${hotelId}`);
@@ -253,25 +279,49 @@ export const roomAPI = {
   },
 };
 
-// Bookings
+// Bookings with cancellation functionality
 export const bookingAPI = {
   getUserBookings: async (userId: string) => {
-    const response = await api.get(`/bookings/user/${userId}`);
-    return response.data;
+    try {
+      const response = await api.get(`/bookings/user/${userId}`);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
   },
   createBooking: async (bookingData: Partial<Booking>) => {
-    const response = await api.post('/bookings', bookingData);
-    return response.data;
+    try {
+      const response = await api.post('/bookings', bookingData);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
   },
   cancelBooking: async (id: string) => {
-    const response = await api.put(`/bookings/${id}/cancel`);
-    return response.data;
+    try {
+      const response = await api.put(`/bookings/${id}/cancel`);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
   },
   getAllBookings: async (hotelId?: string) => {
-    const url = hotelId ? `/bookings/hotel/${hotelId}` : '/bookings';
-    const response = await api.get(url);
-    return response.data;
+    try {
+      const url = hotelId ? `/bookings/hotel/${hotelId}` : '/bookings';
+      const response = await api.get(url);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
   },
+  getBookingReceipt: async (id: string) => {
+    try {
+      const response = await api.get(`/bookings/${id}/receipt`);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
 };
 
 // Users

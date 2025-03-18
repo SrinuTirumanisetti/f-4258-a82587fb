@@ -35,7 +35,6 @@ const RoomCard = ({ room, hotelId, onBookRoom }: RoomCardProps) => {
     if (searchGuests > maxRoomCapacity && searchGuests <= maxRoomCapacity * 2) {
       calculatedPrice = room.price * 2;
     }
-    // If guests exceeds double capacity, show room as unavailable or suggest multiple rooms
     
     setDynamicPrice(calculatedPrice);
   }, [room.price, room.maxPeople]);
@@ -43,7 +42,7 @@ const RoomCard = ({ room, hotelId, onBookRoom }: RoomCardProps) => {
   const handleBookRoom = () => {
     if (!isAuthenticated) {
       toast.error("Please log in to book a room");
-      navigate('/login');
+      navigate('/login', { state: { from: location.pathname } });
       return;
     }
     
@@ -61,9 +60,44 @@ const RoomCard = ({ room, hotelId, onBookRoom }: RoomCardProps) => {
       return;
     }
     
-    // Pick the first available room number
-    setSelectedRoomNumber(room.roomNumbers[0].number);
-    setShowBookingForm(true);
+    // Check availability before allowing booking
+    const { checkIn, checkOut } = getSearchDates();
+    
+    // If no dates selected, prompt user to select dates
+    if (!checkIn || !checkOut) {
+      toast.error("Please select check-in and check-out dates");
+      setIsBooking(false);
+      return;
+    }
+    
+    // Find an available room number for the selected dates
+    let availableRoomNumber = null;
+    
+    for (const roomNum of room.roomNumbers) {
+      let isAvailable = true;
+      
+      // Check if room has unavailable dates that overlap with requested dates
+      for (const unavailableDate of roomNum.unavailableDates) {
+        const date = new Date(unavailableDate);
+        if (date >= checkIn && date <= checkOut) {
+          isAvailable = false;
+          break;
+        }
+      }
+      
+      if (isAvailable) {
+        availableRoomNumber = roomNum.number;
+        break;
+      }
+    }
+    
+    if (availableRoomNumber) {
+      setSelectedRoomNumber(availableRoomNumber);
+      setShowBookingForm(true);
+    } else {
+      toast.error("No rooms available for the selected dates");
+    }
+    
     setIsBooking(false);
   };
   
@@ -88,6 +122,21 @@ const RoomCard = ({ room, hotelId, onBookRoom }: RoomCardProps) => {
     }
     return { checkIn: null, checkOut: null };
   };
+  
+  // Calculate total nights from search dates
+  const calculateTotalNights = () => {
+    const { checkIn, checkOut } = getSearchDates();
+    if (!checkIn || !checkOut) return 1;
+    
+    const diffTime = Math.abs(checkOut.getTime() - checkIn.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    return diffDays || 1;
+  };
+  
+  // Calculate total price
+  const totalNights = calculateTotalNights();
+  const totalPrice = dynamicPrice * totalNights;
   
   return (
     <div className="border border-border rounded-lg overflow-hidden hover:shadow-md transition-all">
@@ -139,13 +188,20 @@ const RoomCard = ({ room, hotelId, onBookRoom }: RoomCardProps) => {
           {/* Booking Section */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-4 border-t border-border">
             <div>
-              <span className="text-2xl font-bold text-hotel-700">${dynamicPrice}</span>
-              <span className="text-muted-foreground ml-1">per night</span>
-              {dynamicPrice !== room.price && (
-                <p className="text-xs text-hotel-600 mt-1">
-                  *Price adjusted based on guest count
-                </p>
-              )}
+              <div className="flex flex-col sm:flex-row sm:items-end gap-1">
+                <span className="text-2xl font-bold text-hotel-700">${dynamicPrice}</span>
+                <span className="text-muted-foreground sm:ml-1">per night</span>
+              </div>
+              <div className="text-sm text-muted-foreground mt-1">
+                {totalNights > 1 && (
+                  <span>${totalPrice} total for {totalNights} nights</span>
+                )}
+                {dynamicPrice !== room.price && (
+                  <p className="text-xs text-hotel-600 mt-1">
+                    *Price adjusted based on guest count
+                  </p>
+                )}
+              </div>
             </div>
             <Button
               onClick={handleBookRoom}
@@ -168,6 +224,7 @@ const RoomCard = ({ room, hotelId, onBookRoom }: RoomCardProps) => {
               roomNumber={selectedRoomNumber}
               checkIn={getSearchDates().checkIn}
               checkOut={getSearchDates().checkOut}
+              totalNights={totalNights}
               onClose={handleCloseBookingForm}
             />
           )}

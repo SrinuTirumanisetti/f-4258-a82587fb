@@ -21,78 +21,12 @@ import {
   Check,
   X
 } from 'lucide-react';
-import { hotelAPI, roomAPI, userAPI } from '@/services/api';
+import { hotelAPI, roomAPI, userAPI, workerAPI } from '@/services/api';
 import { toast } from 'sonner';
 import { Hotel as HotelType, Room as RoomType, User as UserType, Worker } from '@/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
-// Mock API for workers since it wasn't included in the API service
-const workerAPI = {
-  getAllWorkers: async () => {
-    // Mock implementation
-    return [
-      {
-        _id: 'w1',
-        name: 'John Smith',
-        role: 'Housekeeper',
-        hotel: 'h1',
-        email: 'john@example.com',
-        phone: '+1234567890',
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      },
-      {
-        _id: 'w2',
-        name: 'Sarah Johnson',
-        role: 'Receptionist',
-        hotel: 'h1',
-        email: 'sarah@example.com',
-        phone: '+9876543210',
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      },
-      {
-        _id: 'w3',
-        name: 'Mike Davis',
-        role: 'Maintenance',
-        hotel: 'h2',
-        email: 'mike@example.com',
-        phone: '+1122334455',
-        isActive: false,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    ];
-  },
-  createWorker: async (workerData: Partial<Worker>) => {
-    // Mock implementation
-    console.log('Creating worker:', workerData);
-    return {
-      _id: 'w' + Math.floor(Math.random() * 1000),
-      ...workerData,
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-  },
-  updateWorker: async (id: string, workerData: Partial<Worker>) => {
-    // Mock implementation
-    console.log('Updating worker:', id, workerData);
-    return {
-      _id: id,
-      ...workerData,
-      updatedAt: new Date()
-    };
-  },
-  deleteWorker: async (id: string) => {
-    // Mock implementation
-    console.log('Deleting worker:', id);
-    return { success: true };
-  }
-};
-
+// Enhanced ModeratorDashboard component
 const ModeratorDashboard = () => {
   const { state } = useAuth();
   const { user } = state;
@@ -110,10 +44,12 @@ const ModeratorDashboard = () => {
   const [workerFormData, setWorkerFormData] = useState<Partial<Worker>>({
     name: '',
     role: '',
-    hotel: '',
+    hotelId: '',
     email: '',
     phone: '',
-    isActive: true
+    isActive: true,
+    userId: '',
+    assignedRooms: []
   });
   
   // Fetch data for dashboard
@@ -129,7 +65,11 @@ const ModeratorDashboard = () => {
         ]);
         
         setHotels(hotelsData || []);
-        setWorkers(workersData || []);
+        
+        // Ensure workers data matches our Worker type
+        if (Array.isArray(workersData)) {
+          setWorkers(workersData);
+        }
         
         // Create an array to hold all rooms
         let allRooms: RoomType[] = [];
@@ -170,10 +110,12 @@ const ModeratorDashboard = () => {
     setWorkerFormData({
       name: '',
       role: '',
-      hotel: hotels.length > 0 ? hotels[0]._id || '' : '',
+      hotelId: hotels.length > 0 ? hotels[0]._id || '' : '',
       email: '',
       phone: '',
-      isActive: true
+      isActive: true,
+      userId: user?.id || '',
+      assignedRooms: []
     });
     setIsWorkerDialogOpen(true);
   };
@@ -183,10 +125,12 @@ const ModeratorDashboard = () => {
     setWorkerFormData({
       name: worker.name,
       role: worker.role,
-      hotel: worker.hotel,
+      hotelId: worker.hotelId,
       email: worker.email,
       phone: worker.phone || '',
-      isActive: worker.isActive
+      isActive: worker.isActive,
+      userId: worker.userId,
+      assignedRooms: worker.assignedRooms
     });
     setIsWorkerDialogOpen(true);
   };
@@ -231,7 +175,8 @@ const ModeratorDashboard = () => {
     try {
       const updatedRoom = await roomAPI.updateRoom(room._id, {
         ...room,
-        isCleaned: !room.isCleaned
+        isCleaned: !room.isCleaned,
+        needsCleaning: room.isCleaned // If it was cleaned, it now needs cleaning and vice versa
       });
       
       setRooms(rooms.map(r => r._id === room._id ? updatedRoom as RoomType : r));
@@ -434,7 +379,7 @@ const ModeratorDashboard = () => {
                           <div>
                             <span className="text-sm font-medium">Hotel: </span>
                             <span className="text-sm">
-                              {hotels.find(h => h._id === worker.hotel)?.name || 'Unknown Hotel'}
+                              {hotels.find(h => h._id === worker.hotelId)?.name || 'Unknown Hotel'}
                             </span>
                           </div>
                         </div>
@@ -536,21 +481,29 @@ const ModeratorDashboard = () => {
                 
                 <div className="space-y-2">
                   <Label htmlFor="role">Role</Label>
-                  <Input
+                  <select
                     id="role"
                     name="role"
                     value={workerFormData.role}
                     onChange={handleWorkerInputChange}
                     required
-                  />
+                    className="w-full rounded-md border border-input px-3 py-2 bg-background"
+                  >
+                    <option value="">Select Role</option>
+                    <option value="Housekeeper">Housekeeper</option>
+                    <option value="Receptionist">Receptionist</option>
+                    <option value="Manager">Manager</option>
+                    <option value="Maintenance">Maintenance</option>
+                    <option value="Security">Security</option>
+                  </select>
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="hotel">Hotel</Label>
+                  <Label htmlFor="hotelId">Hotel</Label>
                   <select
-                    id="hotel"
-                    name="hotel"
-                    value={workerFormData.hotel}
+                    id="hotelId"
+                    name="hotelId"
+                    value={workerFormData.hotelId}
                     onChange={handleWorkerInputChange}
                     required
                     className="w-full rounded-md border border-input px-3 py-2 bg-background"

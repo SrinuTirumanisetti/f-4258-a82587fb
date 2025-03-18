@@ -44,9 +44,38 @@ const WorkerSchema = new mongoose.Schema({
         ref: 'Room'
       }
     }
+  ],
+  cleanedRooms: [
+    {
+      roomId: {
+        type: mongoose.Schema.ObjectId,
+        ref: 'Room'
+      },
+      cleanedAt: {
+        type: Date,
+        default: Date.now
+      }
+    }
   ]
 }, {
   timestamps: true
+});
+
+// Middleware to ensure hotelId is linked correctly to the Hotel model
+WorkerSchema.pre('save', async function(next) {
+  try {
+    if (this.isNew || this.isModified('hotelId')) {
+      const Hotel = mongoose.model('Hotel');
+      const hotel = await Hotel.findById(this.hotelId);
+      
+      if (!hotel) {
+        throw new Error(`Hotel with id ${this.hotelId} not found`);
+      }
+    }
+    next();
+  } catch (error) {
+    next(error);
+  }
 });
 
 module.exports = mongoose.model('Worker', WorkerSchema);

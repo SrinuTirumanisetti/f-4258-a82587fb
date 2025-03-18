@@ -35,11 +35,30 @@ const BookingSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['confirmed', 'cancelled', 'completed'],
-    default: 'confirmed'
+    enum: ['active', 'cancelled', 'completed'],
+    default: 'active'
+  },
+  receipt: {
+    issueDate: {
+      type: Date,
+      default: Date.now
+    },
+    receiptNumber: {
+      type: String
+    }
   }
 }, {
   timestamps: true
+});
+
+// Generate a receipt number when a booking is created
+BookingSchema.pre('save', function(next) {
+  if (this.isNew) {
+    const timestamp = new Date().getTime();
+    const randomPart = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    this.receipt.receiptNumber = `INV-${timestamp}-${randomPart}`;
+  }
+  next();
 });
 
 module.exports = mongoose.model('Booking', BookingSchema);
