@@ -3,6 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { User, LogOut, ShieldCheck, Shield } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const AuthLinks = ({ isAuthenticated, logout }) => {
   const { state } = useAuth();
@@ -11,42 +19,49 @@ const AuthLinks = ({ isAuthenticated, logout }) => {
   
   const handleLogout = () => {
     logout();
-    navigate('/'); // Redirect to homepage after logout
+    // Navigate is handled by the logout function in authAPI that redirects to homepage
   };
   
   if (isAuthenticated) {
     return (
-      <>
-        {user?.isAdmin && (
-          <Link to="/admin">
-            <Button variant="outline" size="sm" className="btn-transition hover:text-hotel-500">
-              <ShieldCheck className="h-4 w-4 mr-2" />
-              Admin
-            </Button>
-          </Link>
-        )}
-        
-        {user?.isModerator && !user?.isAdmin && (
-          <Link to="/moderator">
-            <Button variant="outline" size="sm" className="btn-transition hover:text-hotel-500">
-              <Shield className="h-4 w-4 mr-2" />
-              Moderator
-            </Button>
-          </Link>
-        )}
-        
-        <Link to="/dashboard">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" className="btn-transition hover:text-hotel-500">
             <User className="h-4 w-4 mr-2" />
-            Dashboard
+            {user?.username || 'Account'}
           </Button>
-        </Link>
-        
-        <Button variant="ghost" size="sm" onClick={handleLogout} className="btn-transition">
-          <LogOut className="h-4 w-4 mr-2" />
-          Logout
-        </Button>
-      </>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuLabel>My Account</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          
+          <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+            <User className="h-4 w-4 mr-2" />
+            User Dashboard
+          </DropdownMenuItem>
+          
+          {user?.isAdmin && (
+            <DropdownMenuItem onClick={() => navigate('/admin')}>
+              <ShieldCheck className="h-4 w-4 mr-2" />
+              Admin Dashboard
+            </DropdownMenuItem>
+          )}
+          
+          {user?.isModerator && !user?.isAdmin && (
+            <DropdownMenuItem onClick={() => navigate('/moderator')}>
+              <Shield className="h-4 w-4 mr-2" />
+              Moderator Dashboard
+            </DropdownMenuItem>
+          )}
+          
+          <DropdownMenuSeparator />
+          
+          <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+            <LogOut className="h-4 w-4 mr-2" />
+            Logout
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     );
   }
   
