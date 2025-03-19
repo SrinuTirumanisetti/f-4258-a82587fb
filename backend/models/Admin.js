@@ -1,32 +1,31 @@
 
 const mongoose = require('mongoose');
 
-const ModeratorSchema = new mongoose.Schema({
+const AdminSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: true,
+    unique: true
   },
-  isActive: {
+  superAdmin: {
     type: Boolean,
-    default: true
+    default: false
   },
-  assignedHotels: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Hotel'
-    }
-  ],
   permissions: {
-    canManageWorkers: {
+    manageUsers: {
       type: Boolean,
       default: true
     },
-    canManageRooms: {
+    manageHotels: {
       type: Boolean,
       default: true
     },
-    canViewBookings: {
+    manageModerators: {
+      type: Boolean,
+      default: true
+    },
+    viewReports: {
       type: Boolean,
       default: true
     }
@@ -35,4 +34,4 @@ const ModeratorSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('Moderator', ModeratorSchema);
+module.exports = mongoose.model('Admin', AdminSchema);

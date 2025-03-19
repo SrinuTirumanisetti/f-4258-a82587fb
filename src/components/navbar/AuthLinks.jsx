@@ -1,7 +1,7 @@
 
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { User, LogOut, ShieldCheck, Shield } from 'lucide-react';
+import { User, LogOut, ShieldCheck, Shield, Briefcase } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
   DropdownMenu,
@@ -19,7 +19,7 @@ const AuthLinks = ({ isAuthenticated, logout }) => {
   
   const handleLogout = () => {
     logout();
-    // Navigate is handled by the logout function in authAPI that redirects to homepage
+    // Logout is handled by the authAPI which redirects to homepage
   };
   
   if (isAuthenticated) {
@@ -47,10 +47,17 @@ const AuthLinks = ({ isAuthenticated, logout }) => {
             </DropdownMenuItem>
           )}
           
-          {user?.isModerator && !user?.isAdmin && (
+          {user?.isModerator && (
             <DropdownMenuItem onClick={() => navigate('/moderator')}>
               <Shield className="h-4 w-4 mr-2" />
               Moderator Dashboard
+            </DropdownMenuItem>
+          )}
+          
+          {user?.isWorker && (
+            <DropdownMenuItem onClick={() => navigate('/worker')}>
+              <Briefcase className="h-4 w-4 mr-2" />
+              Worker Dashboard
             </DropdownMenuItem>
           )}
           

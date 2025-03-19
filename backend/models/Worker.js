@@ -8,12 +8,12 @@ const WorkerSchema = new mongoose.Schema({
     trim: true
   },
   userId: {
-    type: mongoose.Schema.ObjectId,
+    type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
   hotelId: {
-    type: mongoose.Schema.ObjectId,
+    type: mongoose.Schema.Types.ObjectId,
     ref: 'Hotel',
     required: true
   },
@@ -40,15 +40,28 @@ const WorkerSchema = new mongoose.Schema({
   assignedRooms: [
     {
       roomId: {
-        type: mongoose.Schema.ObjectId,
+        type: mongoose.Schema.Types.ObjectId,
         ref: 'Room'
+      },
+      assignedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Moderator'
+      },
+      assignedAt: {
+        type: Date,
+        default: Date.now
+      },
+      status: {
+        type: String,
+        enum: ['pending', 'in-progress', 'completed'],
+        default: 'pending'
       }
     }
   ],
   cleanedRooms: [
     {
       roomId: {
-        type: mongoose.Schema.ObjectId,
+        type: mongoose.Schema.Types.ObjectId,
         ref: 'Room'
       },
       cleanedAt: {
@@ -59,23 +72,6 @@ const WorkerSchema = new mongoose.Schema({
   ]
 }, {
   timestamps: true
-});
-
-// Middleware to ensure hotelId is linked correctly to the Hotel model
-WorkerSchema.pre('save', async function(next) {
-  try {
-    if (this.isNew || this.isModified('hotelId')) {
-      const Hotel = mongoose.model('Hotel');
-      const hotel = await Hotel.findById(this.hotelId);
-      
-      if (!hotel) {
-        throw new Error(`Hotel with id ${this.hotelId} not found`);
-      }
-    }
-    next();
-  } catch (error) {
-    next(error);
-  }
 });
 
 module.exports = mongoose.model('Worker', WorkerSchema);

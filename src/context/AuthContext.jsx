@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useReducer, useEffect, useState } from 'react';
+import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { authAPI, checkBackendConnection } from '@/services/api';
 import { toast } from 'sonner';
 
@@ -165,6 +165,7 @@ export const AuthProvider = ({ children }) => {
     authAPI.logout();
     dispatch({ type: 'LOGOUT' });
     toast.success('Logged out successfully');
+    // Redirect is handled by the authAPI.logout() function
   };
 
   return (

@@ -40,6 +40,20 @@ export const SearchModel = {
   getGuestCount: () => {
     const params = SearchModel.getSearchParams();
     return params.guests || 1;
+  },
+  
+  // Get price range filter
+  getPriceRange: () => {
+    const params = SearchModel.getSearchParams();
+    return params.priceRange || [0, 1000];
+  },
+  
+  // Update price range filter
+  updatePriceRange: (min, max) => {
+    const params = SearchModel.getSearchParams();
+    params.priceRange = [min, max];
+    SearchModel.saveSearchParams(params);
+    return params;
   }
 };
 

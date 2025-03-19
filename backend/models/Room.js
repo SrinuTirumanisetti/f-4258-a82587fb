@@ -7,6 +7,11 @@ const RoomSchema = new mongoose.Schema({
     required: [true, 'Please add a room title'],
     trim: true
   },
+  hotelId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Hotel',
+    required: [true, 'Room must belong to a hotel']
+  },
   price: {
     type: Number,
     required: [true, 'Please add a price']
@@ -29,20 +34,6 @@ const RoomSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
-  isAssigned: {
-    type: Boolean,
-    default: false
-  },
-  bookedBy: {
-    type: mongoose.Schema.ObjectId,
-    ref: 'User',
-    default: null
-  },
-  assignedWorker: {
-    type: mongoose.Schema.ObjectId,
-    ref: 'Worker',
-    default: null
-  },
   needsCleaning: {
     type: Boolean,
     default: false
@@ -54,7 +45,7 @@ const RoomSchema = new mongoose.Schema({
   cleaningHistory: [
     {
       cleanedBy: {
-        type: mongoose.Schema.ObjectId,
+        type: mongoose.Schema.Types.ObjectId,
         ref: 'Worker'
       },
       cleanedAt: {

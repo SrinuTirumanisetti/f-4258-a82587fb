@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 import { mockServices } from './mockData';
 
@@ -104,7 +105,8 @@ export const authAPI = {
             city: 'New York',
             phone: '+1234567890',
             isAdmin: email.includes('admin'),
-            isModerator: email.includes('moderator')
+            isModerator: email.includes('mod'),
+            isWorker: email.includes('worker')
           },
           token
         };
@@ -129,7 +131,8 @@ export const authAPI = {
             country: userData.country,
             city: userData.city,
             isAdmin: false,
-            isModerator: false
+            isModerator: false,
+            isWorker: false
           },
           message: 'Registration successful!'
         };
@@ -158,7 +161,8 @@ export const authAPI = {
           city: 'New York',
           phone: '+1234567890',
           isAdmin: false,
-          isModerator: false
+          isModerator: false,
+          isWorker: false
         };
       }
       
@@ -170,26 +174,62 @@ export const authAPI = {
   },
 };
 
+// Admin API
+export const adminAPI = {
+  getAllAdmins: async () => {
+    try {
+      const response = await api.get('/admins');
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+  getAdminById: async (id) => {
+    try {
+      const response = await api.get(`/admins/${id}`);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+  createAdmin: async (adminData) => {
+    try {
+      const response = await api.post('/admins', adminData);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+  updateAdmin: async (id, adminData) => {
+    try {
+      const response = await api.put(`/admins/${id}`, adminData);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+  deleteAdmin: async (id) => {
+    try {
+      const response = await api.delete(`/admins/${id}`);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+  getAdminProfile: async () => {
+    try {
+      const response = await api.get('/admins/profile/me');
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+};
+
 // Workers API
 export const workerAPI = {
   getAllWorkers: async () => {
     try {
-      if (useMockData) {
-        return [
-          {
-            _id: 'worker1',
-            name: 'John Cleaner',
-            userId: 'user1',
-            hotelId: 'hotel1',
-            role: 'Housekeeper',
-            email: 'john@example.com',
-            phone: '+12345678901',
-            isActive: true,
-            assignedRooms: []
-          }
-        ];
-      }
-      
       const response = await api.get('/workers');
       return response.data;
     } catch (error) {
@@ -228,9 +268,25 @@ export const workerAPI = {
       throw handleApiError(error);
     }
   },
+  getWorkersByHotel: async (hotelId) => {
+    try {
+      const response = await api.get(`/workers/hotel/${hotelId}`);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+  assignRoomToWorker: async (workerId, roomId) => {
+    try {
+      const response = await api.put(`/workers/${workerId}/assign/${roomId}`);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
   markRoomAsCleaned: async (workerId, roomId) => {
     try {
-      const response = await api.put(`/workers/${workerId}/rooms/${roomId}/clean`);
+      const response = await api.put(`/workers/${workerId}/complete/${roomId}`);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -242,23 +298,6 @@ export const workerAPI = {
 export const moderatorAPI = {
   getAllModerators: async () => {
     try {
-      if (useMockData) {
-        return [
-          {
-            _id: 'mod1',
-            userId: 'user123',
-            hotelId: 'hotel1',
-            isActive: true,
-            permissions: {
-              canManageWorkers: true,
-              canManageRooms: true,
-              canViewBookings: true
-            },
-            assignedHotels: ['hotel1']
-          }
-        ];
-      }
-      
       const response = await api.get('/moderators');
       return response.data;
     } catch (error) {
@@ -296,6 +335,38 @@ export const moderatorAPI = {
     } catch (error) {
       throw handleApiError(error);
     }
+  },
+  getModeratorProfile: async () => {
+    try {
+      const response = await api.get('/moderators/profile/me');
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+  getModeratorByUserId: async (userId) => {
+    try {
+      const response = await api.get(`/moderators/user/${userId}`);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+  getModeratorsByHotel: async (hotelId) => {
+    try {
+      const response = await api.get(`/moderators/hotel/${hotelId}`);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+  assignHotelsToModerator: async (moderatorId, hotelIds) => {
+    try {
+      const response = await api.put(`/moderators/${moderatorId}/hotels`, { hotelIds });
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
   }
 };
 
@@ -303,27 +374,15 @@ export const moderatorAPI = {
 export const hotelAPI = {
   getAllHotels: async () => {
     try {
-      if (useMockData) {
-        return [
-          {
-            _id: 'hotel1',
-            name: 'Grand Hotel',
-            type: 'Hotel',
-            city: 'New York',
-            address: '123 Broadway',
-            distance: '0.5 km from center',
-            photos: ['https://example.com/hotel1.jpg'],
-            title: 'Luxury Stay in Downtown',
-            desc: 'Experience luxury in the heart of the city',
-            rating: 4.5,
-            rooms: ['room1', 'room2'],
-            cheapestPrice: 199,
-            featured: true
-          }
-        ];
-      }
-      
       const response = await api.get('/hotels');
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+  getHotelById: async (id) => {
+    try {
+      const response = await api.get(`/hotels/${id}`);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -331,73 +390,7 @@ export const hotelAPI = {
   },
   searchHotels: async (criteria) => {
     try {
-      if (useMockData) {
-        // Filter mock hotels based on criteria
-        const mockHotels = [
-          {
-            _id: 'hotel1',
-            name: 'Grand Hotel',
-            type: 'Hotel',
-            city: 'New York',
-            address: '123 Broadway',
-            distance: '0.5 km from center',
-            photos: ['https://example.com/hotel1.jpg'],
-            title: 'Luxury Stay in Downtown',
-            desc: 'Experience luxury in the heart of the city',
-            rating: 4.5,
-            rooms: ['room1', 'room2'],
-            cheapestPrice: 199,
-            featured: true
-          },
-          {
-            _id: 'hotel2',
-            name: 'Beach Resort',
-            type: 'Resort',
-            city: 'Miami',
-            address: '456 Ocean Drive',
-            distance: '0.2 km from beach',
-            photos: ['https://example.com/hotel2.jpg'],
-            title: 'Relaxing Beach Getaway',
-            desc: 'Enjoy the sun and sand just steps away',
-            rating: 4.8,
-            rooms: ['room3', 'room4'],
-            cheapestPrice: 299,
-            featured: true
-          }
-        ];
-        
-        let results = [...mockHotels];
-        
-        // Filter by city
-        if (criteria.city) {
-          results = results.filter(hotel => 
-            hotel.city.toLowerCase().includes(criteria.city.toLowerCase())
-          );
-        }
-        
-        // Filter by price range
-        if (criteria.priceRange && criteria.priceRange.length === 2) {
-          const [min, max] = criteria.priceRange;
-          results = results.filter(hotel => 
-            hotel.cheapestPrice >= min && hotel.cheapestPrice <= max
-          );
-        }
-        
-        // Store search criteria in localStorage for dynamic pricing
-        if (criteria.guests) {
-          localStorage.setItem('searchGuests', criteria.guests.toString());
-        }
-        
-        return results;
-      }
-      
       const response = await api.post('/hotels/search', criteria);
-      
-      // Store search criteria in localStorage for dynamic pricing
-      if (criteria.guests) {
-        localStorage.setItem('searchGuests', criteria.guests.toString());
-      }
-      
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -441,37 +434,6 @@ export const hotelAPI = {
 export const roomAPI = {
   getRoomsForHotel: async (hotelId) => {
     try {
-      if (useMockData) {
-        return [
-          {
-            _id: 'room1',
-            title: 'Deluxe Double Room',
-            price: 199,
-            maxPeople: 2,
-            desc: 'Spacious room with king-size bed',
-            roomNumbers: [
-              { number: 101, unavailableDates: [] },
-              { number: 102, unavailableDates: [] }
-            ],
-            isCleaned: true,
-            needsCleaning: false
-          },
-          {
-            _id: 'room2',
-            title: 'Family Suite',
-            price: 299,
-            maxPeople: 4,
-            desc: 'Perfect for families with children',
-            roomNumbers: [
-              { number: 201, unavailableDates: [] },
-              { number: 202, unavailableDates: [] }
-            ],
-            isCleaned: true,
-            needsCleaning: false
-          }
-        ];
-      }
-      
       const response = await api.get(`/rooms/hotel/${hotelId}`);
       return response.data;
     } catch (error) {
@@ -634,19 +596,6 @@ export const bookingAPI = {
 export const userAPI = {
   getUserById: async (id) => {
     try {
-      if (useMockData) {
-        return {
-          _id: id,
-          username: 'mockuser',
-          email: 'user@example.com',
-          country: 'USA',
-          city: 'New York',
-          phone: '+1234567890',
-          isAdmin: id === 'admin123',
-          isModerator: id === 'mod123'
-        };
-      }
-      
       const response = await api.get(`/users/${id}`);
       return response.data;
     } catch (error) {

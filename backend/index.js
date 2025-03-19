@@ -17,6 +17,7 @@ const roomsRoutes = require('./routes/rooms');
 const bookingsRoutes = require('./routes/bookings');
 const workersRoutes = require('./routes/workers');
 const moderatorsRoutes = require('./routes/moderators');
+const adminsRoutes = require('./routes/admins');
 
 // Initialize express
 const app = express();
@@ -40,6 +41,7 @@ app.use('/api/rooms', roomsRoutes);
 app.use('/api/bookings', bookingsRoutes);
 app.use('/api/workers', workersRoutes);
 app.use('/api/moderators', moderatorsRoutes);
+app.use('/api/admins', adminsRoutes);
 
 // Health check route
 app.get('/api/health-check', (req, res) => {

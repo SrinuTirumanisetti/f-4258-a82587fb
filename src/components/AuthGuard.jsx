@@ -7,7 +7,8 @@ import { toast } from 'sonner';
 const AuthGuard = ({ 
   children, 
   requireAdmin = false,
-  requireModerator = false 
+  requireModerator = false,
+  requireWorker = false
 }) => {
   const { state } = useAuth();
   const { isAuthenticated, user } = state;
@@ -20,8 +21,10 @@ const AuthGuard = ({
       toast.error("You don't have admin privileges to access this page");
     } else if (requireModerator && !user?.isModerator && !user?.isAdmin) {
       toast.error("You don't have moderator privileges to access this page");
+    } else if (requireWorker && !user?.isWorker && !user?.isModerator && !user?.isAdmin) {
+      toast.error("You don't have worker privileges to access this page");
     }
-  }, [isAuthenticated, requireAdmin, requireModerator, user]);
+  }, [isAuthenticated, requireAdmin, requireModerator, requireWorker, user]);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
@@ -32,6 +35,10 @@ const AuthGuard = ({
   }
 
   if (requireModerator && !user?.isModerator && !user?.isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+  
+  if (requireWorker && !user?.isWorker && !user?.isModerator && !user?.isAdmin) {
     return <Navigate to="/" replace />;
   }
 
