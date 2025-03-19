@@ -4,13 +4,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 
-interface AuthGuardProps {
-  children: React.ReactNode;
-  requireAdmin?: boolean;
-  requireModerator?: boolean;
-}
-
-const AuthGuard: React.FC<AuthGuardProps> = ({ 
+const AuthGuard = ({ 
   children, 
   requireAdmin = false,
   requireModerator = false 
